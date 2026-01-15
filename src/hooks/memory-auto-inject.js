@@ -187,6 +187,9 @@ switch (hookType) {
     if (memories.length > 0) {
       updateAccessCount(memories.map(m => m.id));
       console.log(formatMemories(memories));
+    } else {
+      // Always remind Claude to use memory, even if nothing found
+      console.log(`\n🔍 No memories found for: "${keywords.join(' ')}"\n→ After answering, consider: memory_remember if this is worth storing.\n`);
     }
     break;
   }
