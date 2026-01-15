@@ -90,7 +90,7 @@ export class WorkingMemory {
   private sessionId: string;
   private state: SessionState;
   private sessionFile: string;
-  private autosaveInterval?: NodeJS.Timeout;
+  private autosaveInterval?: ReturnType<typeof setInterval>;
 
   constructor(sessionId?: string) {
     this.ensureDirectories();

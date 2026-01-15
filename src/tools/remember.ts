@@ -3,7 +3,7 @@
  */
 
 import type Database from 'better-sqlite3';
-import type { RememberInput, Memory, MemoryType } from '../types.js';
+import type { RememberInput, MemoryType, ImportanceLevel } from '../types.js';
 import { createMemory } from '../db/operations.js';
 import { embedMemory, isEmbeddingsAvailable } from '../db/embeddings.js';
 import { quickEncode, decode } from '../aime/index.js';
@@ -64,7 +64,7 @@ export async function remember(
     decodedCache: decoded,
     scope,
     projectHash: scope === 'project' ? projectHash : undefined,
-    importance: importance as any,
+    importance: importance as ImportanceLevel,
   });
 
   // Generate embedding if API key is available

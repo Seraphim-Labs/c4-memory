@@ -224,7 +224,7 @@ export async function consolidate(
   }
 
   // Get active Level 1 memories (raw memories that can be consolidated)
-  let memories = queryMemories(db, {
+  const memories = queryMemories(db, {
     projectHash,
     limit: 500,
     includeArchived: false,

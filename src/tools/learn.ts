@@ -7,7 +7,6 @@
 
 import type Database from 'better-sqlite3';
 import { processForAutoLearning, mightBeLearnable } from '../auto/index.js';
-import type { LearnableEvent } from '../types.js';
 
 export interface LearnInput {
   content: string;

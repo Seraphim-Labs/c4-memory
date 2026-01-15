@@ -4,7 +4,7 @@
 
 import type Database from 'better-sqlite3';
 import type { ForgetInput } from '../types.js';
-import { deleteMemory, deleteMemoriesByQuery, queryMemories } from '../db/operations.js';
+import { deleteMemory, queryMemories } from '../db/operations.js';
 import { searchBySimilarity, isEmbeddingsAvailable, deleteEmbedding } from '../db/embeddings.js';
 import { decode } from '../aime/index.js';
 import { hasApiKey, getConfig } from '../config/index.js';
@@ -64,7 +64,7 @@ export async function forget(
           id: r.memory.id,
           content: r.memory.decodedCache || decode(r.memory.encoded),
         }));
-      } catch (error) {
+      } catch {
         // Fall back to basic query
       }
     }

@@ -3,7 +3,7 @@
  */
 
 import type Database from 'better-sqlite3';
-import type { RecallInput, Memory, MemoryRelationship } from '../types.js';
+import type { RecallInput, Memory } from '../types.js';
 import {
   queryMemories,
   queryMemoriesWithKeywords,

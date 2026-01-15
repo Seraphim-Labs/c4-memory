@@ -15,6 +15,19 @@ import {
 
 import { openGlobalDb, hashProject } from './db/index.js';
 import { loadConfig } from './config/index.js';
+import type {
+  RememberInput,
+  RecallInput,
+  RefreshInput,
+  ForgetInput,
+  ConfigInput,
+  FeedbackInput,
+  ConsolidateInput,
+  PruneInput,
+} from './types.js';
+import type { LearnInput } from './tools/learn.js';
+import type { ExportInput } from './tools/export.js';
+import type { ImportInput } from './tools/import.js';
 import {
   remember,
   rememberToolDef,
@@ -45,7 +58,7 @@ import {
 } from './tools/index.js';
 
 // Initialize config and database
-const appConfig = loadConfig();
+const _appConfig = loadConfig();  // eslint-disable-line @typescript-eslint/no-unused-vars
 const db = openGlobalDb();
 
 // Get project hash from environment if available
@@ -94,7 +107,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case 'memory_remember': {
-        const result = await remember(db, args as any, projectHash);
+        const result = await remember(db, args as unknown as RememberInput, projectHash);
         return {
           content: [
             {
@@ -106,7 +119,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_recall': {
-        const result = await recall(db, args as any, projectHash);
+        const result = await recall(db, args as unknown as RecallInput, projectHash);
         return {
           content: [
             {
@@ -118,7 +131,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_refresh': {
-        const result = await refresh(db, args as any, projectHash);
+        const result = await refresh(db, args as unknown as RefreshInput, projectHash);
         return {
           content: [
             {
@@ -130,7 +143,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_forget': {
-        const result = await forget(db, args as any, projectHash);
+        const result = await forget(db, args as unknown as ForgetInput, projectHash);
         return {
           content: [
             {
@@ -142,7 +155,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_stats': {
-        const result = await stats(db, args?.scope as any, projectHash);
+        const result = await stats(db, (args as { scope?: string })?.scope as 'global' | 'project' | 'both' | undefined, projectHash);
         return {
           content: [
             {
@@ -154,7 +167,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_config': {
-        const configArgs = args as any || {};
+        const configArgs = (args || {}) as ConfigInput;
         const result = config(configArgs);
 
         // Auto-store config changes as memories (so we remember what was configured)
@@ -187,7 +200,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_learn': {
-        const result = await learn(db, args as any, projectHash);
+        const result = await learn(db, args as unknown as LearnInput, projectHash);
         return {
           content: [
             {
@@ -200,7 +213,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Evolution tools (v2)
       case 'memory_feedback': {
-        const result = await feedback(args as any);
+        const result = await feedback(args as unknown as FeedbackInput);
         return {
           content: [
             {
@@ -212,7 +225,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_consolidate': {
-        const result = await consolidate(db, args as any, projectHash);
+        const result = await consolidate(db, args as unknown as ConsolidateInput, projectHash);
         return {
           content: [
             {
@@ -224,7 +237,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_prune': {
-        const result = await prune(db, args as any, projectHash);
+        const result = await prune(db, args as unknown as PruneInput, projectHash);
         return {
           content: [
             {
@@ -237,7 +250,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Import/Export tools (v2.1)
       case 'memory_export': {
-        const result = await exportMemories(db, args as any, projectHash);
+        const result = await exportMemories(db, args as unknown as ExportInput, projectHash);
         return {
           content: [
             {
@@ -249,7 +262,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_import': {
-        const result = await importMemories(db, args as any, projectHash);
+        const result = await importMemories(db, args as unknown as ImportInput, projectHash);
         return {
           content: [
             {

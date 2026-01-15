@@ -31,11 +31,11 @@ const PATTERNS = {
   windowsPath: /[A-Za-z]:\\[^\s,;)}\]"']+/g,
 
   // Unix paths: /home/username/..., /Users/username/...
-  unixHomePath: /\/(?:home|Users)\/[^\/]+\/[^\s,;)}\]"']+/g,
+  unixHomePath: /\/(?:home|Users)\/[^/]+\/[^\s,;)}\]"']+/g,
   unixAbsPath: /\/(?:var|opt|srv|etc|usr)\/[^\s,;)}\]"']+/g,
 
   // Usernames in common patterns
-  usernameInPath: /(?:Users|home)[\/\\]([a-zA-Z0-9_-]+)/gi,
+  usernameInPath: /(?:Users|home)[/\\]([a-zA-Z0-9_-]+)/gi,
 
   // Email addresses
   email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
@@ -92,7 +92,7 @@ export function sanitizeContent(content: string, options: SanitizeOptions = {}):
       try {
         const regex = new RegExp(pattern, 'gi');
         result = result.replace(regex, replacement);
-      } catch (e) {
+      } catch {
         // Invalid regex, skip
       }
     }
@@ -104,7 +104,7 @@ export function sanitizeContent(content: string, options: SanitizeOptions = {}):
       try {
         const regex = new RegExp(pattern, 'gi');
         result = result.replace(regex, '<REDACTED>');
-      } catch (e) {
+      } catch {
         // Invalid regex, skip
       }
     }
@@ -126,7 +126,7 @@ export function sanitizeContent(content: string, options: SanitizeOptions = {}):
     const usernameMatches = content.match(PATTERNS.usernameInPath);
     if (usernameMatches) {
       const usernames = new Set(usernameMatches.map(m => {
-        const match = m.match(/[\/\\]([a-zA-Z0-9_-]+)$/);
+        const match = m.match(/[/\\]([a-zA-Z0-9_-]+)$/);
         return match ? match[1] : null;
       }).filter(Boolean));
 

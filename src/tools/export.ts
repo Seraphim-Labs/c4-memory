@@ -15,7 +15,7 @@ import { searchBySimilarity, isEmbeddingsAvailable } from '../db/embeddings.js';
 import { decode } from '../aime/index.js';
 import { getConfig, hasApiKey } from '../config/index.js';
 import { sanitizeContent, containsSensitiveData, type SanitizeOptions } from '../sanitize/index.js';
-import type { MemoryType } from '../types.js';
+import type { MemoryType, Memory } from '../types.js';
 
 // .brain file format version
 const BRAIN_FORMAT_VERSION = '1.0';
@@ -105,7 +105,7 @@ export interface ExportResult {
 export async function exportMemories(
   db: Database.Database,
   input: ExportInput,
-  projectHash?: string
+  _projectHash?: string
 ): Promise<ExportResult> {
   const warnings: string[] = [];
 
@@ -115,7 +115,7 @@ export async function exportMemories(
     const minImportance = input.minImportance ?? 5;  // Default to important memories only
 
     // Search for relevant memories
-    let memories: Array<{ memory: any; similarity?: number }> = [];
+    let memories: Array<{ memory: Memory; similarity?: number }> = [];
 
     // Try semantic search first
     if (hasApiKey() && isEmbeddingsAvailable()) {
@@ -125,7 +125,7 @@ export async function exportMemories(
           minSimilarity: 0.3,
           model: config.embedding_model,
         });
-      } catch (e) {
+      } catch {
         warnings.push(`Semantic search failed, falling back to keyword search`);
       }
     }

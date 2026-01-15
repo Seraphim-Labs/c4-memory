@@ -11,7 +11,7 @@ import * as path from 'path';
 import { createMemory, queryMemoriesWithKeywords, extractKeywords } from '../db/operations.js';
 import { quickEncode, decode } from '../aime/index.js';
 import type { MemoryType, ImportanceLevel } from '../types.js';
-import type { BrainFile, BrainFileMemory } from './export.js';
+import type { BrainFile } from './export.js';
 
 // Map .brain file types to internal types
 const TYPE_MAP: Record<string, MemoryType> = {
@@ -162,7 +162,7 @@ export async function importMemories(
 
     try {
       brainFile = JSON.parse(fileContent);
-    } catch (e) {
+    } catch {
       return {
         success: false,
         imported: 0,

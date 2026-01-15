@@ -11,8 +11,7 @@
  */
 
 import type Database from 'better-sqlite3';
-import type { Memory, PruneInput, MemoryStatus } from '../types.js';
-import { openGlobalDb } from '../db/schema.js';
+import type { Memory, PruneInput } from '../types.js';
 import {
   getLowUsefulnessMemories,
   updateMemoryStatus,
@@ -111,7 +110,7 @@ export async function prune(
   const minUsefulness = input.minUsefulness ?? 2.0;
   const maxAge = input.maxAge ?? 90;
   const dryRun = input.dryRun ?? false;
-  const permanent = (input as any).permanent ?? false;
+  const permanent = input.permanent ?? false;
 
   // Get memories eligible for pruning
   const candidates = getLowUsefulnessMemories(db, minUsefulness, maxAge, 200);
@@ -251,25 +250,43 @@ export function getArchivedMemories(
     WHERE status = 'archived'
     ORDER BY accessed_at DESC
     LIMIT ?
-  `).all(limit) as any[];
+  `).all(limit) as Array<{
+    id: number;
+    type: string;
+    encoded: string;
+    decoded_cache: string | null;
+    scope: string;
+    project_hash: string | null;
+    importance: number;
+    created_at: number;
+    accessed_at: number;
+    access_count: number;
+    usefulness_score: number | null;
+    times_helpful: number | null;
+    times_unhelpful: number | null;
+    status: string | null;
+    parent_id: number | null;
+    level: number | null;
+    last_decay: number | null;
+  }>;
 
   return rows.map(row => ({
     id: row.id,
-    type: row.type,
+    type: row.type as Memory['type'],
     encoded: row.encoded,
     decodedCache: row.decoded_cache ?? undefined,
-    scope: row.scope,
+    scope: row.scope as Memory['scope'],
     projectHash: row.project_hash ?? undefined,
-    importance: row.importance,
+    importance: row.importance as Memory['importance'],
     createdAt: row.created_at,
     accessedAt: row.accessed_at,
     accessCount: row.access_count,
     usefulnessScore: row.usefulness_score ?? 5.0,
     timesHelpful: row.times_helpful ?? 0,
     timesUnhelpful: row.times_unhelpful ?? 0,
-    status: row.status ?? 'active',
+    status: (row.status ?? 'active') as Memory['status'],
     parentId: row.parent_id ?? undefined,
-    level: row.level ?? 1,
+    level: (row.level ?? 1) as Memory['level'],
     lastDecay: row.last_decay ?? undefined,
   }));
 }

@@ -63,7 +63,7 @@ function tokenize(encoded: string): Token[] {
     }
 
     // Structural symbols (single char)
-    if (Object.values(STRUCTURAL).includes(char as any)) {
+    if ((Object.values(STRUCTURAL) as string[]).includes(char)) {
       tokens.push({ type: 'structural', value: char });
       i++;
       continue;
@@ -181,8 +181,8 @@ function tokenize(encoded: string): Token[] {
         i < encoded.length &&
         encoded[i] !== '"' &&
         encoded[i] !== '#' &&
-        !Object.values(STRUCTURAL).includes(encoded[i] as any) &&
-        !Object.values(PREFIXES).includes(encoded[i] as any)
+        !(Object.values(STRUCTURAL) as string[]).includes(encoded[i]) &&
+        !(Object.values(PREFIXES) as string[]).includes(encoded[i])
       ) {
         text += encoded[i];
         i++;

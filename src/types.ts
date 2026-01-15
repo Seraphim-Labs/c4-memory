@@ -149,6 +149,7 @@ export interface PruneInput {
   minUsefulness?: number;    // Remove below this score (default 2.0)
   maxAge?: number;           // Days without access (default 90)
   dryRun?: boolean;          // Preview only
+  permanent?: boolean;       // Permanently delete instead of archiving
 }
 
 export interface EvolveInput {

@@ -5,7 +5,7 @@
 import type Database from 'better-sqlite3';
 import OpenAI from 'openai';
 import type { Memory } from '../types.js';
-import { getMemory, queryMemories } from './operations.js';
+import { queryMemories } from './operations.js';
 
 // Cache OpenAI client
 let openaiClient: OpenAI | null = null;

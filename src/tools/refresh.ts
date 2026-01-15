@@ -51,7 +51,7 @@ export async function refresh(
       });
 
       memories = results.map(r => r.memory);
-    } catch (error) {
+    } catch {
       // Fall back to basic query
     }
   }
