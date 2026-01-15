@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">C4-Memory v2.0.7</h1>
+  <h1 align="center">C4-Memory v2.1.0</h1>
   <p align="center">
     <strong>Persistent memory for Claude Code</strong><br>
     Give Claude a brain that remembers <em>and evolves</em>
@@ -43,7 +43,23 @@ Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introd
 - **Multi-factor Retrieval** - Results ranked by usefulness_score × importance × recency
 - **Auto-Inject Hooks** - Memories are automatically injected into Claude's context - no manual recall needed!
 
-### v2.0.7: Token Overflow Prevention (NEW!)
+### v2.1.0: Memory Import/Export (NEW!)
+Share knowledge with others via `.brain` files:
+
+- **`memory_export`** - Export memories about any topic to shareable `.brain` files
+- **`memory_import`** - Import `.brain` files from others or community packs
+- **Automatic Sanitization** - Personal data (paths, usernames, emails, API keys) stripped by default
+- **Portable Format** - JSON-based `.brain` files work across tools and platforms
+
+```bash
+# Export everything you know about React
+memory_export({ topic: "React patterns", outputPath: "react.brain" })
+
+# Import someone else's knowledge
+memory_import({ inputPath: "typescript-tips.brain" })
+```
+
+### v2.0.7: Token Overflow Prevention
 Prevents `memory_recall` from exceeding context limits:
 
 - **Content Truncation** - New `maxContentLength` parameter (default: 500 chars) truncates long memories

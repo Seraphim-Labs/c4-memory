@@ -14,3 +14,7 @@ export { learn, learnToolDef, type LearnResult } from './learn.js';
 export { feedback, feedbackToolDef, type FeedbackResult } from './feedback.js';
 export { consolidate, consolidateToolDef, type ConsolidateResult } from './consolidate.js';
 export { prune, pruneToolDef, type PruneResult } from './prune.js';
+
+// Import/Export tools (v2.1)
+export { exportMemories, exportToolDef, type ExportResult, type BrainFile, type BrainFileMemory } from './export.js';
+export { importMemories, importToolDef, type ImportResult } from './import.js';

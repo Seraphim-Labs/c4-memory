@@ -37,6 +37,11 @@ import {
   consolidateToolDef,
   prune,
   pruneToolDef,
+  // Import/Export tools (v2.1)
+  exportMemories,
+  exportToolDef,
+  importMemories,
+  importToolDef,
 } from './tools/index.js';
 
 // Initialize config and database
@@ -75,6 +80,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       feedbackToolDef,
       consolidateToolDef,
       pruneToolDef,
+      // Import/Export tools (v2.1)
+      exportToolDef,
+      importToolDef,
     ],
   };
 });
@@ -217,6 +225,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'memory_prune': {
         const result = await prune(db, args as any, projectHash);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      // Import/Export tools (v2.1)
+      case 'memory_export': {
+        const result = await exportMemories(db, args as any, projectHash);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case 'memory_import': {
+        const result = await importMemories(db, args as any, projectHash);
         return {
           content: [
             {
