@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">C4-Memory v2.0.6</h1>
+  <h1 align="center">C4-Memory v2.0.7</h1>
   <p align="center">
     <strong>Persistent memory for Claude Code</strong><br>
     Give Claude a brain that remembers <em>and evolves</em>
@@ -38,7 +38,17 @@ Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introd
 - **Multi-factor Retrieval** - Results ranked by usefulness_score × importance × recency
 - **Auto-Inject Hooks** - Memories are automatically injected into Claude's context - no manual recall needed!
 
-### v2.0.6: Hook Stability Fix (NEW!)
+### v2.0.7: Token Overflow Prevention (NEW!)
+Prevents `memory_recall` from exceeding context limits:
+
+- **Content Truncation** - New `maxContentLength` parameter (default: 500 chars) truncates long memories
+- **Optional Linked Memories** - `includeLinked` now defaults to `false` to save tokens
+- **Optional Suggestions** - `includeSuggestions` now defaults to `false` to save tokens
+- **Linked Memory Limit** - Max 5 linked memories per result when enabled
+
+This fixes the "result exceeds maximum allowed tokens" error that occurred with large memory databases.
+
+### v2.0.6: Hook Stability Fix
 - **Robust State Loading** - `loadState()` now merges defaults with saved state, preventing crashes when state file is from older version
 - **Fixes "Cannot read properties of undefined"** - SessionStart hook no longer crashes when `filesWorkedOn` or other properties are missing
 

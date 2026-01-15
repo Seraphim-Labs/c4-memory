@@ -18,6 +18,14 @@ import { searchBySimilarity, isEmbeddingsAvailable } from '../db/embeddings.js';
 import { decode } from '../aime/index.js';
 import { getConfig, hasApiKey } from '../config/index.js';
 
+/**
+ * Truncate content to max length, adding ellipsis if truncated
+ */
+function truncateContent(content: string, maxLength: number): string {
+  if (maxLength <= 0 || content.length <= maxLength) return content;
+  return content.substring(0, maxLength) + '... (truncated)';
+}
+
 export interface LinkedMemory {
   id: number;
   content: string;
@@ -64,6 +72,9 @@ export async function recall(
 ): Promise<RecallResult> {
   const config = getConfig();
   const limit = input.limit ?? 10;
+  const maxContentLength = input.maxContentLength ?? 500;  // Truncate long memories
+  const includeLinked = input.includeLinked ?? false;      // Off by default to save tokens
+  const includeSuggestions = input.includeSuggestions ?? false;  // Off by default
 
   let memories: Array<{ memory: Memory; similarity?: number }> = [];
   let searchMethod: 'semantic' | 'keyword' | 'all' = 'all';
@@ -114,49 +125,54 @@ export async function recall(
     searchMethod = keywords.length > 0 ? 'keyword' : 'all';
   }
 
-  // Fetch linked memories for each result
+  // Fetch linked memories for each result (only if requested)
   let totalLinkedCount = 0;
   const formattedMemories = memories.map(({ memory, similarity }) => {
-    // Get relationships for this memory
-    const relationships = getMemoryRelationships(db, memory.id);
     let linkedMemories: LinkedMemory[] | undefined;
 
-    if (relationships.length > 0) {
-      linkedMemories = [];
-      const seenIds = new Set([memory.id]);
+    // Only fetch linked memories if explicitly requested
+    if (includeLinked) {
+      const relationships = getMemoryRelationships(db, memory.id);
 
-      for (const rel of relationships) {
-        // Get the linked memory (could be source or target)
-        const linkedId = rel.sourceId === memory.id ? rel.targetId : rel.sourceId;
-        if (seenIds.has(linkedId)) continue;
-        seenIds.add(linkedId);
+      if (relationships.length > 0) {
+        linkedMemories = [];
+        const seenIds = new Set([memory.id]);
 
-        const linkedMem = getMemory(db, linkedId);
-        if (linkedMem && linkedMem.status === 'active') {
-          linkedMemories.push({
-            id: linkedMem.id,
-            content: linkedMem.decodedCache || decode(linkedMem.encoded),
-            type: linkedMem.type,
-            importance: linkedMem.importance,
-            relationship: rel.relationship,
-            strength: rel.strength,
-          });
-          totalLinkedCount++;
+        for (const rel of relationships.slice(0, 5)) {  // Limit to 5 linked per memory
+          // Get the linked memory (could be source or target)
+          const linkedId = rel.sourceId === memory.id ? rel.targetId : rel.sourceId;
+          if (seenIds.has(linkedId)) continue;
+          seenIds.add(linkedId);
+
+          const linkedMem = getMemory(db, linkedId);
+          if (linkedMem && linkedMem.status === 'active') {
+            const linkedContent = linkedMem.decodedCache || decode(linkedMem.encoded);
+            linkedMemories.push({
+              id: linkedMem.id,
+              content: truncateContent(linkedContent, maxContentLength),
+              type: linkedMem.type,
+              importance: linkedMem.importance,
+              relationship: rel.relationship,
+              strength: rel.strength,
+            });
+            totalLinkedCount++;
+          }
         }
-      }
 
-      // Only include if there are actual linked memories
-      if (linkedMemories.length === 0) {
-        linkedMemories = undefined;
+        // Only include if there are actual linked memories
+        if (linkedMemories.length === 0) {
+          linkedMemories = undefined;
+        }
       }
     }
 
     // Update access count for retrieved memory
     updateMemoryAccess(db, memory.id);
 
+    const rawContent = memory.decodedCache || decode(memory.encoded);
     return {
       id: memory.id,
-      content: memory.decodedCache || decode(memory.encoded),
+      content: truncateContent(rawContent, maxContentLength),
       type: memory.type,
       importance: memory.importance,
       scope: memory.scope,
@@ -172,18 +188,21 @@ export async function recall(
     recordCoAccess(db, memoryIds, 0.1);
   }
 
-  // Get suggested memories based on access patterns
+  // Get suggested memories based on access patterns (only if requested)
   let suggestedMemories: SuggestedMemory[] | undefined;
-  if (memoryIds.length > 0) {
+  if (includeSuggestions && memoryIds.length > 0) {
     const suggestions = getSuggestedMemories(db, memoryIds, 3);
     if (suggestions.length > 0) {
-      suggestedMemories = suggestions.map(mem => ({
-        id: mem.id,
-        content: mem.decodedCache || decode(mem.encoded),
-        type: mem.type,
-        importance: mem.importance,
-        reason: 'Frequently accessed with similar queries',
-      }));
+      suggestedMemories = suggestions.map(mem => {
+        const suggestedContent = mem.decodedCache || decode(mem.encoded);
+        return {
+          id: mem.id,
+          content: truncateContent(suggestedContent, maxContentLength),
+          type: mem.type,
+          importance: mem.importance,
+          reason: 'Frequently accessed with similar queries',
+        };
+      });
     }
   }
 
@@ -227,6 +246,20 @@ export const recallToolDef = {
         minimum: 1,
         maximum: 9,
         description: 'Minimum importance level to include in results',
+      },
+      maxContentLength: {
+        type: 'number',
+        minimum: 50,
+        maximum: 10000,
+        description: 'Maximum characters per memory content. Longer content is truncated. Default: 500. Use 0 for no limit.',
+      },
+      includeLinked: {
+        type: 'boolean',
+        description: 'Include linked/related memories in results. Default: false (saves tokens)',
+      },
+      includeSuggestions: {
+        type: 'boolean',
+        description: 'Include suggested memories based on access patterns. Default: false (saves tokens)',
       },
     },
     required: ['query'],

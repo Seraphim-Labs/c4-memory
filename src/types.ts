@@ -103,6 +103,9 @@ export interface RecallInput {
   limit?: number;
   scope?: 'global' | 'project' | 'both';
   minImportance?: number;
+  maxContentLength?: number;      // Truncate content to this length (default: 500)
+  includeLinked?: boolean;        // Include linked memories (default: false)
+  includeSuggestions?: boolean;   // Include suggested memories (default: false)
 }
 
 export interface RefreshInput {
