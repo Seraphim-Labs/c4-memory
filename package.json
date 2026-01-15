@@ -1,6 +1,6 @@
 {
   "name": "c4-memory",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Persistent memory for Claude Code - Give Claude a brain that remembers and evolves. Features AIME compression, semantic search, auto-learning, memory evolution, and usefulness tracking.",
   "type": "module",
   "main": "dist/index.js",
@@ -41,11 +41,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_USERNAME/c4-memory.git"
+    "url": "git+https://github.com/Seraphim-Labs/c4-memory.git"
   },
-  "homepage": "https://github.com/YOUR_USERNAME/c4-memory#readme",
+  "homepage": "https://github.com/Seraphim-Labs/c4-memory#readme",
   "bugs": {
-    "url": "https://github.com/YOUR_USERNAME/c4-memory/issues"
+    "url": "https://github.com/Seraphim-Labs/c4-memory/issues"
   },
   "engines": {
     "node": ">=18.0.0"
