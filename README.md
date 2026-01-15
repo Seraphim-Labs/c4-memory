@@ -8,8 +8,8 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/c4-memory"><img src="https://img.shields.io/npm/v/c4-memory.svg" alt="npm version"></a>
-  <a href="https://github.com/YOUR_USERNAME/c4-memory/actions"><img src="https://github.com/YOUR_USERNAME/c4-memory/workflows/CI/badge.svg" alt="CI Status"></a>
-  <a href="https://github.com/YOUR_USERNAME/c4-memory/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/c4-memory.svg" alt="License"></a>
+  <a href="https://github.com/Seraphim-Labs/c4-memory/actions"><img src="https://github.com/Seraphim-Labs/c4-memory/workflows/CI/badge.svg" alt="CI Status"></a>
+  <a href="https://github.com/Seraphim-Labs/c4-memory/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/c4-memory.svg" alt="License"></a>
 </p>
 
 ---
@@ -36,6 +36,7 @@ Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introd
 - **Memory Pruning** - Low-value memories are automatically archived
 - **Hierarchical Knowledge** - Memories evolve from raw facts (L1) → patterns (L2) → principles (L3)
 - **Multi-factor Retrieval** - Results ranked by usefulness_score × importance × recency
+- **Auto-Inject Hooks** - Memories are automatically injected into Claude's context - no manual recall needed!
 
 ## Quick Start
 
@@ -148,25 +149,37 @@ AIME:    ◊v1.0§ΕtypΞe"TS2304"⊳λts⊳→"add import"◊
 | Patterns | Πsg Πfc | Singleton, factory, etc. |
 | Errors | Εsyn Εtyp | Syntax, type errors |
 
-## Hook Enforcement (Optional)
+## Auto-Inject Hooks (v2.0)
 
-For maximum effectiveness, C4-Memory can install hooks that ensure Claude actually uses its memory:
+The v2.0 hooks don't just remind Claude to use memory - they **automatically query the database and inject relevant memories directly into Claude's context**. No manual recall needed!
 
 ```bash
 c4-memory init --with-hooks
 ```
 
-This adds 5 hooks to Claude Code:
+### How It Works
 
-| Hook | Trigger | Action |
-|------|---------|--------|
-| SessionStart | New session | Forces memory recall |
-| UserPromptSubmit | Each message | Multi-level recall |
-| PreToolUse | Before edits | Checks for patterns |
-| PostToolUse | After changes | Prompts learning |
-| Stop | Before stopping | Blocks until learnings stored |
+| Hook | Trigger | What Happens |
+|------|---------|--------------|
+| SessionStart | New session | Injects project/convention memories |
+| UserPromptSubmit | Each message | Searches your message for keywords, injects matching memories |
+| PreToolUse | Before Edit/Write/Bash | Injects relevant patterns for the file/command |
+| PostToolUse | After errors | Automatically looks up error solutions from past fixes |
+| Stop | Session end | Reminds to store any new learnings |
 
-The hooks are optional but recommended for consistent memory usage.
+### Example Flow
+
+```
+You: "How do I fix TS2304 errors?"
+
+[Hook automatically queries database]
+[Injects: "📚 RELEVANT MEMORIES - USE THIS KNOWLEDGE:
+  Memory #114: TS2304 means missing import - check import statements..."]
+
+Claude: Based on my stored knowledge, TS2304 errors mean...
+```
+
+The hooks are optional but highly recommended for a truly "memory-enhanced" Claude experience.
 
 ## Configuration
 
@@ -337,7 +350,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/c4-memory.git
+git clone https://github.com/Seraphim-Labs/c4-memory.git
 cd c4-memory
 
 # Install dependencies
