@@ -156,9 +156,9 @@ export function detectExplicitRemember(content: string): LearnableEvent | null {
  */
 export function detectCorrection(content: string): LearnableEvent | null {
   const patterns = [
-    /(?:that'?s?\s+)?(?:wrong|incorrect|not\s+(?:right|correct))[\.,]?\s*(.+)/i,
-    /actually[\.,]?\s*(.+)/i,
-    /no[\.,]\s+(?:it'?s?\s+)?(.+)/i,
+    /(?:that'?s?\s+)?(?:wrong|incorrect|not\s+(?:right|correct))[.,]?\s*(.+)/i,
+    /actually[.,]?\s*(.+)/i,
+    /no[.,]\s+(?:it'?s?\s+)?(.+)/i,
     /correction:\s*(.+)/i,
   ];
 
