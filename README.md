@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">C4-Memory v2.1.0</h1>
+  <h1 align="center">C4-Memory v2.1.1</h1>
   <p align="center">
     <strong>Persistent memory for Claude Code</strong><br>
     Give Claude a brain that remembers <em>and evolves</em>
@@ -43,7 +43,12 @@ Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introd
 - **Multi-factor Retrieval** - Results ranked by usefulness_score × importance × recency
 - **Auto-Inject Hooks** - Memories are automatically injected into Claude's context - no manual recall needed!
 
-### v2.1.0: Memory Import/Export (NEW!)
+### v2.1.1: CI/Type Safety Fix
+- **Zero ESLint Warnings** - Fixed all type safety warnings and unused imports
+- **Proper TypeScript Types** - Replaced `any` casts with proper input types throughout
+- **CI Pipeline Passing** - All 35 tests pass with no linting errors
+
+### v2.1.0: Memory Import/Export
 Share knowledge with others via `.brain` files:
 
 - **`memory_export`** - Export memories about any topic to shareable `.brain` files
