@@ -18,7 +18,7 @@ Ever frustrated that Claude forgets your project conventions between sessions? O
 
 C4-Memory is an MCP (Model Context Protocol) server that gives Claude Code persistent memory across sessions. It automatically learns from errors, corrections, and patterns - and uses semantic search to recall relevant knowledge exactly when needed.
 
-##Example
+## Example
 After telling Claude Code to research and rememebr how to make good non-AI-slop UI/UX, I then asked it to build me a newletter in a separate session. Here is what it did WITHOUT the frontenddesign skill...
 <img width="2947" height="1630" alt="image" src="https://github.com/user-attachments/assets/66bce98c-2116-4ddc-aa3b-ed4337e8d323" />
 I truly believe c4 is the future of Claude Code.
