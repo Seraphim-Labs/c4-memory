@@ -43,11 +43,27 @@ if (!Database) {
 const DB_PATH = path.join(os.homedir(), '.claude', 'memory', 'global.db');
 const STATE_PATH = path.join(os.homedir(), '.claude', 'memory', 'inject-state.json');
 
+const DEFAULT_STATE = {
+  lastQuery: '',
+  errors: [],
+  sessionStart: null,
+  filesWorkedOn: [],
+  lastUserMessage: '',
+  lastAction: '',
+  currentTask: '',
+  frontendInjectedThisSession: false,
+};
+
 function loadState() {
+  const defaults = { ...DEFAULT_STATE };
   try {
-    if (fs.existsSync(STATE_PATH)) return JSON.parse(fs.readFileSync(STATE_PATH, 'utf-8'));
+    if (fs.existsSync(STATE_PATH)) {
+      const saved = JSON.parse(fs.readFileSync(STATE_PATH, 'utf-8'));
+      // Merge defaults with saved state to handle missing properties
+      return { ...defaults, ...saved };
+    }
   } catch(e) {}
-  return { lastQuery: '', errors: [] };
+  return defaults;
 }
 
 function saveState(state) {
@@ -161,6 +177,38 @@ const state = loadState();
 
 switch (hookType) {
   case 'SessionStart': {
+    // Check if we have resume state from previous session
+    const hasResumeContext = state.lastUserMessage || state.filesWorkedOn.length > 0 || state.currentTask;
+
+    if (hasResumeContext) {
+      let resumeInfo = '\n<session-resume>\n📋 RESUMING FROM PREVIOUS SESSION:\n';
+
+      if (state.currentTask) {
+        resumeInfo += `\n🎯 Last task: ${state.currentTask}\n`;
+      }
+      if (state.lastUserMessage) {
+        resumeInfo += `\n💬 Last user message: "${state.lastUserMessage.substring(0, 200)}${state.lastUserMessage.length > 200 ? '...' : ''}"\n`;
+      }
+      if (state.lastAction) {
+        resumeInfo += `\n🔧 Last action: ${state.lastAction}\n`;
+      }
+      if (state.filesWorkedOn.length > 0) {
+        const recentFiles = state.filesWorkedOn.slice(-5);
+        resumeInfo += `\n📁 Recent files:\n${recentFiles.map(f => `   - ${f}`).join('\n')}\n`;
+      }
+      if (state.errors.length > 0) {
+        resumeInfo += `\n⚠️ Unresolved errors from last session: ${state.errors.length}\n`;
+      }
+
+      resumeInfo += '\nUse this context to continue seamlessly. Ask user if unclear.\n</session-resume>\n';
+      console.log(resumeInfo);
+    }
+
+    // Reset flags for new session but preserve resume info
+    state.frontendInjectedThisSession = false;
+    state.sessionStart = Date.now();
+    saveState(state);
+
     // Load project context memories
     const memories = searchMemories(['project', 'convention', 'pattern', 'config', 'setup'], 5);
     if (memories.length > 0) {
@@ -173,6 +221,37 @@ switch (hookType) {
   case 'UserPromptSubmit': {
     const msg = input.message || input.prompt || '';
     if (msg.length < 5) break;
+
+    // Track session context for resume
+    state.lastUserMessage = msg.substring(0, 500);
+
+    // Detect task patterns and update current task
+    const taskPatterns = [
+      /(?:help\s+(?:me\s+)?)?(?:implement|create|build|add|fix|update|refactor|debug|write|make)\s+(.{10,80})/i,
+      /(?:can\s+you|please|i\s+need|i\s+want)\s+(.{10,80})/i,
+    ];
+    for (const pattern of taskPatterns) {
+      const match = msg.match(pattern);
+      if (match) {
+        state.currentTask = match[1].substring(0, 100);
+        break;
+      }
+    }
+    saveState(state);
+
+    // CORRECTION DETECTION - User correcting Claude's behavior/assumptions
+    const correctionPatterns = /\b(actually|no[,.]?\s|wrong|not\s+\w+[,.]?\s+but|instead\s+of|don't\s+use|never\s+use|always\s+use|stop\s+using|we\s+use|prefer\s+\w+\s+over|that's\s+not\s+right|incorrect)\b/i;
+    if (correctionPatterns.test(msg)) {
+      console.log(`
+<user-prompt-submit-hook>
+⚠️ CORRECTION DETECTED - MANDATORY ACTION:
+The user is correcting your behavior or assumptions.
+You MUST store this correction using memory_remember with importance=9, scope='global'.
+Example: memory_remember({ content: "[Correction details]", importance: 9, type: "lesson" })
+DO NOT FORGET TO STORE THIS. User corrections are the most valuable memories.
+</user-prompt-submit-hook>
+`);
+    }
 
     const keywords = extractKeywords(msg);
     if (keywords.length === 0) break;
@@ -196,14 +275,80 @@ switch (hookType) {
 
   case 'PreToolUse': {
     const tool = input.tool || '';
-    if (!['Edit', 'Write', 'Bash'].includes(tool)) break;
+    if (!['Edit', 'Write', 'Bash', 'Read'].includes(tool)) break;
 
     let context = '';
+    let filePath = '';
     if (tool === 'Bash') {
       context = input.input?.command || '';
+      state.lastAction = `Bash: ${context.substring(0, 50)}`;
+    } else if (tool === 'Read') {
+      filePath = input.input?.file_path || '';
+      context = filePath;
+      state.lastAction = `Read: ${path.basename(filePath)}`;
     } else {
-      context = input.input?.file_path || '';
+      filePath = input.input?.file_path || '';
+      context = filePath;
       if (input.input?.old_string) context += ' ' + input.input.old_string;
+      state.lastAction = `${tool}: ${path.basename(filePath)}`;
+    }
+
+    // Track files worked on for session resume
+    if (filePath && !state.filesWorkedOn.includes(filePath)) {
+      state.filesWorkedOn.push(filePath);
+      // Keep only last 20 files
+      if (state.filesWorkedOn.length > 20) {
+        state.filesWorkedOn = state.filesWorkedOn.slice(-20);
+      }
+    }
+    saveState(state);
+
+    // FILE-SPECIFIC MEMORY RECALL - Search for memories mentioning this file
+    if (filePath) {
+      const fileName = path.basename(filePath);
+      const fileDir = path.dirname(filePath).split(path.sep).slice(-2).join('/');
+      const fileMemories = searchMemories([fileName, fileDir], 2);
+      if (fileMemories.length > 0) {
+        console.log(`\n<file-context>\n📁 Memories related to ${fileName}:`);
+        updateAccessCount(fileMemories.map(m => m.id));
+        console.log(formatMemories(fileMemories));
+        console.log('</file-context>\n');
+      }
+    }
+
+    // FRONTEND FILE DETECTION - Always inject UI/UX guidelines
+    const frontendExtensions = /\.(tsx|jsx|vue|svelte|css|scss|sass|less|html|astro)$/i;
+    const isFrontendFile = frontendExtensions.test(filePath);
+
+    if (isFrontendFile && !state.frontendInjectedThisSession) {
+      state.frontendInjectedThisSession = true;
+      saveState(state);
+
+      console.log(`
+<pre-tool-use-hook>
+🎨 FRONTEND FILE DETECTED - MANDATORY UI/UX GUIDELINES:
+
+⛔ NEVER USE THESE FONTS: Inter, Roboto, Open Sans, Lato, Arial, system fonts
+⛔ NEVER USE: Purple gradients on white, solid color backgrounds, #3B82F6 blue
+⛔ NEVER USE: Cookie-cutter layouts, predictable patterns
+
+✅ TYPOGRAPHY: Use distinctive fonts (Clash Display, Satoshi, Playfair Display, JetBrains Mono)
+   - Weight extremes: 100/200 vs 800/900 (NOT 400 vs 600)
+   - Size jumps of 3x+ (not 1.5x)
+
+✅ COLOR: Dominant colors with SHARP accents, draw from IDE themes (Dracula, Nord, Catppuccin)
+   - Use CSS variables for consistency
+
+✅ BACKGROUNDS: Layer CSS gradients, geometric patterns, atmospheric depth
+   - NEVER default to solid colors
+
+✅ MOTION: One orchestrated page load with staggered animation-delay > scattered micro-interactions
+
+✅ APPROACH: Design like it belongs on Awwwards. Make unexpected choices.
+
+This is MANDATORY. Failure to follow = rejection.
+</pre-tool-use-hook>
+`);
     }
 
     const keywords = extractKeywords(context);
