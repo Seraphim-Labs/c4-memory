@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">C4-Memory v2.0</h1>
+  <h1 align="center">C4-Memory v2.0.5</h1>
   <p align="center">
     <strong>Persistent memory for Claude Code</strong><br>
     Give Claude a brain that remembers <em>and evolves</em>
@@ -27,7 +27,7 @@ C4-Memory is an MCP (Model Context Protocol) server that gives Claude Code persi
 - **Auto-Learning** - Automatically detects errors, fixes, patterns, and corrections
 - **Scope Control** - Global memories shared everywhere, or project-specific memories
 
-### v2.0: MemEvolve Features (NEW!)
+### v2.0: MemEvolve Features
 Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introduces self-evolving memory:
 
 - **Usefulness Tracking** - Memories are scored based on helpfulness, recency, and access patterns
@@ -37,6 +37,24 @@ Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introd
 - **Hierarchical Knowledge** - Memories evolve from raw facts (L1) → patterns (L2) → principles (L3)
 - **Multi-factor Retrieval** - Results ranked by usefulness_score × importance × recency
 - **Auto-Inject Hooks** - Memories are automatically injected into Claude's context - no manual recall needed!
+
+### v2.0.5: Context Loss Prevention (NEW!)
+Designed to survive Claude Code's auto-compact and prevent context loss:
+
+- **Working Memory Layer** - Three-tier memory system (hot/warm/cold) that survives auto-compact
+  - Hot memory: Last 10 minutes of actions (auto-expires)
+  - Warm memory: Session state persisted to disk (24-hour TTL)
+  - Cold memory: Permanent database storage
+- **Access Pattern Learning** - Tracks which memories are used together and suggests related memories
+- **Memory Linking** - Recall includes linked memories from relationships
+- **Keyword Fallback Search** - Works when semantic search is unavailable (no API key needed)
+- **API Key Health Check** - Validates OpenAI key and warns about issues
+- **Auto-Store Config** - Configuration changes are automatically stored as memories
+- **Enhanced Hooks**:
+  - Correction detection (triggers on "actually", "wrong", etc.)
+  - Resume state injection at session start
+  - File-triggered auto-recall when reading/editing files
+  - Frontend file detection with UI/UX guidelines
 
 ## Quick Start
 
@@ -371,5 +389,5 @@ MIT - see [LICENSE](LICENSE)
 
 <p align="center">
   Made for the Claude Code community<br>
-  <a href="https://github.com/YOUR_USERNAME/c4-memory">Star on GitHub</a>
+  <a href="https://github.com/Seraphim-Labs/c4-memory">Star on GitHub</a>
 </p>
