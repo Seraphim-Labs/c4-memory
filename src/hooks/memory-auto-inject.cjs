@@ -84,6 +84,93 @@ function extractKeywords(text) {
     .filter(w => w.length > 2 && !stop.has(w)).slice(0, 8);
 }
 
+/**
+ * Intelligent topic extraction - detects domains and generates semantic queries
+ * Returns topics that should trigger memory_recall calls
+ */
+function extractTopics(text) {
+  const topics = new Set();
+  const lowerText = text.toLowerCase();
+
+  // Technology/Framework detection → best practices queries
+  const techPatterns = {
+    'nextjs|next.js|next js': ['NextJS best practices', 'NextJS patterns', 'React server components'],
+    'react': ['React patterns', 'React hooks', 'React best practices'],
+    'vue|vuejs': ['Vue best practices', 'Vue composition API'],
+    'svelte|sveltekit': ['Svelte patterns', 'SvelteKit'],
+    'typescript|ts': ['TypeScript patterns', 'TypeScript best practices'],
+    'tailwind': ['Tailwind CSS patterns', 'Tailwind best practices'],
+    'prisma': ['Prisma patterns', 'database schema'],
+    'supabase': ['Supabase patterns', 'Supabase auth'],
+    'firebase': ['Firebase patterns', 'Firebase auth'],
+    'mongodb|mongoose': ['MongoDB patterns', 'database design'],
+    'postgres|postgresql': ['PostgreSQL patterns', 'database design'],
+    'graphql': ['GraphQL patterns', 'API design'],
+    'trpc': ['tRPC patterns', 'type-safe API'],
+    'express': ['Express patterns', 'Node.js API'],
+    'fastapi': ['FastAPI patterns', 'Python API'],
+    'django': ['Django patterns', 'Python web'],
+    'electron': ['Electron patterns', 'desktop app'],
+    'netlify': ['Netlify deployment', 'Netlify functions', 'Netlify configuration'],
+    'vercel': ['Vercel deployment', 'serverless functions'],
+    'docker': ['Docker patterns', 'containerization'],
+    'aws|lambda': ['AWS patterns', 'serverless'],
+  };
+
+  for (const [pattern, relatedTopics] of Object.entries(techPatterns)) {
+    if (new RegExp(pattern, 'i').test(text)) {
+      relatedTopics.forEach(t => topics.add(t));
+    }
+  }
+
+  // Domain detection → domain-specific queries
+  const domainPatterns = {
+    'dashboard|analytics|charts|metrics|visualization': ['dashboard design', 'data visualization', 'UI/UX dashboards'],
+    'auth|login|signup|register|password|session': ['authentication patterns', 'auth security', 'session management'],
+    'form|input|validation|submit': ['form validation', 'form patterns', 'UX forms'],
+    'api|endpoint|rest|fetch|axios': ['API design', 'REST patterns', 'error handling'],
+    'database|db|query|schema|model': ['database design', 'data modeling', 'query optimization'],
+    'test|testing|jest|vitest|cypress': ['testing patterns', 'test best practices'],
+    'deploy|deployment|ci|cd|pipeline': ['deployment patterns', 'CI/CD'],
+    'style|css|design|ui|ux|layout': ['UI/UX design', 'CSS patterns', 'frontend aesthetics'],
+    'animation|transition|motion|framer': ['animation patterns', 'motion design'],
+    'responsive|mobile|breakpoint': ['responsive design', 'mobile-first'],
+    'error|exception|catch|handling': ['error handling patterns'],
+    'state|redux|zustand|context|store': ['state management', 'React state'],
+    'cache|caching|redis|memoiz': ['caching strategies', 'performance optimization'],
+    'websocket|realtime|socket|live': ['realtime patterns', 'WebSocket'],
+    'upload|file|image|media|blob': ['file upload patterns', 'media handling'],
+    'email|notification|alert': ['notification patterns', 'email integration'],
+    'payment|stripe|checkout|billing': ['payment integration', 'Stripe patterns'],
+    'search|filter|sort|pagination': ['search patterns', 'filtering UX'],
+    'chat|message|conversation': ['chat UI patterns', 'messaging'],
+    'map|location|geo': ['geolocation', 'maps integration'],
+  };
+
+  for (const [pattern, relatedTopics] of Object.entries(domainPatterns)) {
+    if (new RegExp(pattern, 'i').test(text)) {
+      relatedTopics.forEach(t => topics.add(t));
+    }
+  }
+
+  // Quality/style modifiers
+  if (/cool|awesome|beautiful|stunning|modern|sleek|professional/i.test(text)) {
+    topics.add('UI/UX design');
+    topics.add('frontend aesthetics');
+  }
+  if (/fast|performance|optimize|speed/i.test(text)) {
+    topics.add('performance optimization');
+  }
+  if (/secure|security|safe/i.test(text)) {
+    topics.add('security best practices');
+  }
+  if (/scalable|scale|growth/i.test(text)) {
+    topics.add('scalability patterns');
+  }
+
+  return Array.from(topics).slice(0, 6); // Max 6 topics
+}
+
 function searchMemories(keywords, limit = 5) {
   if (!fs.existsSync(DB_PATH)) return [];
 
@@ -253,23 +340,46 @@ DO NOT FORGET TO STORE THIS. User corrections are the most valuable memories.
 `);
     }
 
+    // INTELLIGENT TOPIC EXTRACTION - Generate semantic queries
+    const topics = extractTopics(msg);
     const keywords = extractKeywords(msg);
-    if (keywords.length === 0) break;
 
-    const queryKey = keywords.join(' ');
-    if (queryKey === state.lastQuery) break; // Don't repeat same query
+    // Combine topics and keywords for comprehensive search
+    const allSearchTerms = [...new Set([...topics, ...keywords])];
 
+    const queryKey = allSearchTerms.join(' ');
+    if (queryKey === state.lastQuery) break;
     state.lastQuery = queryKey;
     saveState(state);
 
+    // Search memories with both keywords and topics
     const memories = searchMemories(keywords, 5);
+
+    // Build output with EXPLICIT recall instructions
+    let output = '\n<user-prompt-submit-hook>\n';
+
+    // Always show detected topics and FORCE explicit recalls
+    if (topics.length > 0) {
+      output += '🧠 MANDATORY MEMORY RECALLS - Execute these BEFORE coding:\n';
+      output += topics.map(t => `   → memory_recall("${t}")`).join('\n');
+      output += '\n\n';
+    }
+
+    // Show pre-fetched relevant memories
     if (memories.length > 0) {
       updateAccessCount(memories.map(m => m.id));
-      console.log(formatMemories(memories));
-    } else {
-      // Always remind Claude to use memory, even if nothing found
-      console.log(`\n<user-prompt-submit-hook>\n🔍 MEMORY CHECK: No stored memories for "${keywords.join(' ')}"\nACTION REQUIRED: After answering, if the information is useful, call memory_remember to store it.\n</user-prompt-submit-hook>\n`);
+      output += '📚 PRE-FETCHED RELEVANT MEMORIES:\n';
+      for (const mem of memories) {
+        const content = (mem.decoded_cache || '').substring(0, 300);
+        output += `\n[Memory #${mem.id} | ${mem.type} | importance:${mem.importance}]\n${content}\n`;
+      }
+    } else if (topics.length === 0) {
+      output += `🔍 No stored memories found for: "${keywords.join(' ')}"\n`;
+      output += 'ACTION: After completing task, store useful learnings with memory_remember.\n';
     }
+
+    output += '</user-prompt-submit-hook>\n';
+    console.log(output);
     break;
   }
 
@@ -373,26 +483,88 @@ This is MANDATORY. Failure to follow = rejection.
     const output = input.output || '';
 
     // Detect errors and find solutions
-    if (tool === 'Bash' && /error|failed|exception|cannot find|not found|TS\d{4}/i.test(output)) {
-      state.errors.push({ text: output.substring(0, 200), time: Date.now() });
+    // Avoid false positives: "no errors", "0 errors", "without error"
+    const hasRealError = /error|failed|exception|cannot find|not found|TS\d{4}|ERR!|ENOENT|EACCES|npm ERR/i.test(output) &&
+      !/\b(no|0|zero|without|free of)\s*(errors?|issues?|problems?)/i.test(output) &&
+      !/success|passed|completed successfully/i.test(output);
+
+    if (tool === 'Bash' && hasRealError) {
+      // Extract error signature for better searching
+      const errorSignatures = [];
+
+      // TypeScript errors
+      const tsMatch = output.match(/TS\d{4}/g);
+      if (tsMatch) errorSignatures.push(...tsMatch);
+
+      // Common error patterns
+      const errorPhrases = output.match(/(?:error|failed|cannot|not found|undefined|null)[^.\n]{0,50}/gi);
+      if (errorPhrases) errorSignatures.push(...errorPhrases.slice(0, 3));
+
+      // Module/package errors
+      const moduleMatch = output.match(/(?:module|package|dependency)\s+['"]?([^'">\s]+)/gi);
+      if (moduleMatch) errorSignatures.push(...moduleMatch);
+
+      state.errors.push({
+        text: output.substring(0, 300),
+        signatures: errorSignatures,
+        time: Date.now()
+      });
       state.errors = state.errors.slice(-5);
       saveState(state);
 
       const errorMemories = searchErrors(output, 3);
+
+      let errorOutput = '\n<post-tool-use-hook>\n🔴 ERROR DETECTED\n\n';
+
+      // FORCE explicit memory_recall for the error
+      if (errorSignatures.length > 0) {
+        errorOutput += '🧠 MANDATORY: Search memory for this error:\n';
+        errorOutput += errorSignatures.slice(0, 3).map(sig =>
+          `   → memory_recall("${sig.substring(0, 50).replace(/"/g, '')}")`
+        ).join('\n');
+        errorOutput += '\n\n';
+      }
+
       if (errorMemories.length > 0) {
         updateAccessCount(errorMemories.map(m => m.id));
-        console.log('\n🔴 ERROR DETECTED - Found relevant solutions:');
-        console.log(formatMemories(errorMemories));
+        errorOutput += '📚 FOUND RELEVANT ERROR SOLUTIONS:\n';
+        for (const mem of errorMemories) {
+          const content = (mem.decoded_cache || '').substring(0, 400);
+          errorOutput += `\n[Memory #${mem.id} | importance:${mem.importance}]\n${content}\n`;
+        }
+      } else {
+        errorOutput += '⚠️ No stored solution found. After fixing, store with:\n';
+        errorOutput += `   memory_learn("${errorSignatures[0] || 'error'}: <your fix here>")\n`;
       }
+
+      errorOutput += '</post-tool-use-hook>\n';
+      console.log(errorOutput);
     }
 
     // Detect fix after error - remind to store
-    if (tool === 'Bash' && state.errors.length > 0 && !/error|failed/i.test(output)) {
+    // Check for success indicators OR absence of real errors
+    const looksLikeSuccess = /success|passed|completed|built|done|ok|✓|✔/i.test(output) ||
+      /\b(no|0|zero|without|free of)\s*(errors?|issues?|problems?)/i.test(output) ||
+      !hasRealError;
+
+    if (tool === 'Bash' && state.errors.length > 0 && looksLikeSuccess && !hasRealError) {
       const lastErr = state.errors[state.errors.length - 1];
-      if (lastErr && Date.now() - lastErr.time < 180000) {
+      if (lastErr && Date.now() - lastErr.time < 300000) { // 5 min window
         state.errors.pop();
         saveState(state);
-        console.log(`\n✅ Fix worked! IMPORTANT: Call memory_learn to store this fix: "${lastErr.text.substring(0,50)}..."\n`);
+
+        const signatures = lastErr.signatures || [];
+        console.log(`
+<post-tool-use-hook>
+✅ ERROR FIXED! MANDATORY: Store this fix now:
+
+   memory_learn("${signatures[0] || 'Error'}: <describe your fix>")
+
+Original error: "${lastErr.text.substring(0, 100)}..."
+
+DO NOT SKIP THIS. Future you will thank present you.
+</post-tool-use-hook>
+`);
       }
     }
     break;

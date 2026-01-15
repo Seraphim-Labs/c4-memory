@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">C4-Memory v2.1.1</h1>
+  <h1 align="center">C4-Memory v2.1.2</h1>
   <p align="center">
     <strong>Persistent memory for Claude Code</strong><br>
     Give Claude a brain that remembers <em>and evolves</em>
@@ -42,6 +42,16 @@ Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introd
 - **Hierarchical Knowledge** - Memories evolve from raw facts (L1) → patterns (L2) → principles (L3)
 - **Multi-factor Retrieval** - Results ranked by usefulness_score × importance × recency
 - **Auto-Inject Hooks** - Memories are automatically injected into Claude's context - no manual recall needed!
+
+### v2.1.2: Intelligent Topic Extraction
+Enhanced auto-inject hook with semantic topic detection:
+
+- **Smart Topic Detection** - Detects technologies (NextJS, React, Supabase, Netlify, etc.) and maps to best-practice queries
+- **Domain Recognition** - Recognizes domains (dashboard, auth, forms, API, etc.) and triggers relevant recalls
+- **Mandatory Recall Instructions** - Hook outputs explicit `memory_recall()` commands Claude must execute
+- **Better Error Detection** - Extracts error signatures (TS codes, module errors) for targeted recall
+- **False Positive Prevention** - "No errors" and "Build successful" no longer trigger error handling
+- **Fix Success Detection** - Prompts to store fixes with `memory_learn()` after errors are resolved
 
 ### v2.1.1: CI/Type Safety Fix
 - **Zero ESLint Warnings** - Fixed all type safety warnings and unused imports
