@@ -141,12 +141,12 @@ function updateAccessCount(memoryIds) {
 function formatMemories(memories) {
   if (memories.length === 0) return '';
 
-  let output = '\n📚 RELEVANT MEMORIES (use this knowledge):\n';
+  let output = '\n<user-prompt-submit-hook>\n📚 RELEVANT MEMORIES - USE THIS KNOWLEDGE IN YOUR RESPONSE:\n';
   for (const mem of memories) {
     const content = (mem.decoded_cache || '').substring(0, 300);
-    output += `\n[#${mem.id} ${mem.type} imp:${mem.importance}] ${content}\n`;
+    output += `\n[Memory #${mem.id} | ${mem.type} | importance:${mem.importance}]\n${content}\n`;
   }
-  output += '\n---\n';
+  output += '\n</user-prompt-submit-hook>\n';
   return output;
 }
 
@@ -189,7 +189,7 @@ switch (hookType) {
       console.log(formatMemories(memories));
     } else {
       // Always remind Claude to use memory, even if nothing found
-      console.log(`\n🔍 No memories found for: "${keywords.join(' ')}"\n→ After answering, consider: memory_remember if this is worth storing.\n`);
+      console.log(`\n<user-prompt-submit-hook>\n🔍 MEMORY CHECK: No stored memories for "${keywords.join(' ')}"\nACTION REQUIRED: After answering, if the information is useful, call memory_remember to store it.\n</user-prompt-submit-hook>\n`);
     }
     break;
   }
