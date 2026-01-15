@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">C4-Memory v2.0.5</h1>
+  <h1 align="center">C4-Memory v2.0.6</h1>
   <p align="center">
     <strong>Persistent memory for Claude Code</strong><br>
     Give Claude a brain that remembers <em>and evolves</em>
@@ -38,7 +38,11 @@ Inspired by the [MemEvolve paper](https://arxiv.org/abs/2512.18746), v2.0 introd
 - **Multi-factor Retrieval** - Results ranked by usefulness_score × importance × recency
 - **Auto-Inject Hooks** - Memories are automatically injected into Claude's context - no manual recall needed!
 
-### v2.0.5: Context Loss Prevention (NEW!)
+### v2.0.6: Hook Stability Fix (NEW!)
+- **Robust State Loading** - `loadState()` now merges defaults with saved state, preventing crashes when state file is from older version
+- **Fixes "Cannot read properties of undefined"** - SessionStart hook no longer crashes when `filesWorkedOn` or other properties are missing
+
+### v2.0.5: Context Loss Prevention
 Designed to survive Claude Code's auto-compact and prevent context loss:
 
 - **Working Memory Layer** - Three-tier memory system (hot/warm/cold) that survives auto-compact
