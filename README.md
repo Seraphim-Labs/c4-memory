@@ -96,6 +96,16 @@ Designed to survive Claude Code's auto-compact and prevent context loss:
   - File-triggered auto-recall when reading/editing files
   - Frontend file detection with UI/UX guidelines
 
+## Requirements
+
+- **Node.js 18+** - Required for ES modules support
+- **Build tools** (only if prebuilt binaries unavailable):
+  - **Windows**: `npm install -g windows-build-tools` (run as Admin)
+  - **macOS**: `xcode-select --install`
+  - **Linux**: `sudo apt install build-essential python3`
+
+> **Note**: Most users won't need build tools - prebuilt binaries are included for common platforms.
+
 ## Quick Start
 
 ### 1. Install
@@ -400,6 +410,24 @@ cat ~/.claude/settings.json | grep hooks
 Reinstall with:
 ```bash
 c4-memory init --with-hooks --force
+```
+
+### Installation fails with "node-gyp" or "build" errors?
+
+This means prebuilt binaries aren't available for your platform. Install build tools:
+
+```bash
+# Windows (run PowerShell as Admin)
+npm install -g windows-build-tools
+
+# macOS
+xcode-select --install
+
+# Ubuntu/Debian
+sudo apt install build-essential python3
+
+# Then retry
+npm install -g c4-memory
 ```
 
 ## Contributing
