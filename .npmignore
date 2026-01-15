@@ -1,0 +1,25 @@
+# Source files (published via dist/)
+src/
+tests/
+
+# Config files
+.github/
+.eslintrc*
+eslint.config.js
+.prettierrc
+vitest.config.ts
+tsconfig.json
+
+# Development files
+.env*
+*.db
+coverage/
+.vscode/
+.idea/
+
+# Documentation source (keep README)
+docs/
+
+# Git
+.git/
+.gitignore

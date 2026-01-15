@@ -1,0 +1,74 @@
+{
+  "name": "c4-memory",
+  "version": "2.0.0",
+  "description": "Persistent memory for Claude Code - Give Claude a brain that remembers and evolves. Features AIME compression, semantic search, auto-learning, memory evolution, and usefulness tracking.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "c4-memory": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && npm run copy-hooks",
+    "copy-hooks": "node -e \"const fs=require('fs');const path=require('path');const src='src/hooks';const dst='dist/hooks';if(fs.existsSync(src)){fs.mkdirSync(dst,{recursive:true});fs.readdirSync(src).forEach(f=>fs.copyFileSync(path.join(src,f),path.join(dst,f)));}\"",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "mcp",
+    "model-context-protocol",
+    "memory",
+    "ai",
+    "llm",
+    "anthropic",
+    "persistent-memory",
+    "semantic-search",
+    "embeddings",
+    "aime",
+    "memory-evolution",
+    "knowledge-management",
+    "memevolve"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOUR_USERNAME/c4-memory.git"
+  },
+  "homepage": "https://github.com/YOUR_USERNAME/c4-memory#readme",
+  "bugs": {
+    "url": "https://github.com/YOUR_USERNAME/c4-memory/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "postinstall": "echo 'Run c4-memory init --with-hooks for automatic memory evolution'",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "better-sqlite3": "^12.6.0",
+    "openai": "^6.16.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.0.0"
+  }
+}

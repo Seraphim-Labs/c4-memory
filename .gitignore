@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Coverage
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test databases (don't commit actual memory data)
+*.db
+*.db-journal
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+tmpclaude-*
+start.js
+
+# Package lock (optional - some projects prefer to commit this)
+# package-lock.json
