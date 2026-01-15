@@ -134,7 +134,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_stats': {
-        const result = stats(db, args?.scope as any, projectHash);
+        const result = await stats(db, args?.scope as any, projectHash);
         return {
           content: [
             {
@@ -146,7 +146,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'memory_config': {
-        const result = config(args as any || {});
+        const configArgs = args as any || {};
+        const result = config(configArgs);
+
+        // Auto-store config changes as memories (so we remember what was configured)
+        if (configArgs.openai_api_key && result.success) {
+          const keyPreview = configArgs.openai_api_key.slice(-4);
+          await remember(db, {
+            content: `Configuration: OpenAI API key set for semantic search (ending in ...${keyPreview}). This enables vector embeddings for better memory recall.`,
+            type: 'fact',
+            importance: 8,
+            scope: 'global',
+          }, undefined);
+        }
+        if (configArgs.auto_learn !== undefined && result.success) {
+          await remember(db, {
+            content: `Configuration: Auto-learn ${configArgs.auto_learn ? 'enabled' : 'disabled'}. ${configArgs.auto_learn ? 'System will automatically extract learnings from conversations.' : 'Manual memory storage only.'}`,
+            type: 'fact',
+            importance: 7,
+            scope: 'global',
+          }, undefined);
+        }
+
         return {
           content: [
             {

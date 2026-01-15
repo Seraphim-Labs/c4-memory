@@ -204,6 +204,39 @@ export function isEmbeddingsAvailable(): boolean {
 }
 
 /**
+ * Validate API key by making a test API call
+ * Returns status and any error message
+ */
+export async function validateApiKey(): Promise<{
+  valid: boolean;
+  error?: string;
+  keyConfigured: boolean;
+}> {
+  if (!openaiClient) {
+    return { valid: false, keyConfigured: false, error: 'OpenAI client not initialized. No API key configured.' };
+  }
+
+  try {
+    // Make a minimal API call to validate the key
+    // Using embeddings endpoint with minimal input
+    await openaiClient.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: 'test',
+    });
+    return { valid: true, keyConfigured: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      valid: false,
+      keyConfigured: true,
+      error: errorMessage.includes('401')
+        ? 'API key is invalid or expired. Please update with memory_config.'
+        : `API error: ${errorMessage}`,
+    };
+  }
+}
+
+/**
  * Get embedding stats
  */
 export function getEmbeddingStats(db: Database.Database): {

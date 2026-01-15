@@ -5,6 +5,54 @@ All notable changes to C4-Memory will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.5] - 2025-01-15
+
+### Added
+
+- **Working Memory Layer** (`src/db/working-memory.ts`)
+  - Hot memory tier (10-minute TTL) for recent actions
+  - Warm memory tier (24-hour TTL) for session state
+  - Automatic session persistence to disk
+  - Resume context generation for session continuation
+  - Survives Claude Code auto-compact
+
+- **Access Pattern Learning**
+  - `recordCoAccess()` - Track memories accessed together
+  - `getSuggestedMemories()` - Predict relevant memories based on patterns
+  - `getFrequentlyCoAccessedMemories()` - Find co-accessed memory clusters
+  - `learnFromAccessPatterns()` - Strengthen relationships automatically
+  - `decayRelationshipStrengths()` - Let unused patterns fade
+
+- **Memory Linking in Recall**
+  - Recall now includes `linkedMemories` from relationships
+  - Recall includes `suggestedMemories` based on access patterns
+  - Automatic access count updates on retrieval
+
+- **Keyword Fallback Search**
+  - `extractKeywords()` - Extract meaningful search terms
+  - `queryMemoriesWithKeywords()` - SQL LIKE-based fallback
+  - Works when semantic search is unavailable
+
+- **API Key Health Check**
+  - `validateApiKey()` - Test API key validity
+  - `memory_stats` now includes health status
+  - Warns about invalid/expired API keys
+
+- **Auto-Store Config Changes**
+  - Config changes automatically stored as memories
+  - Never forget API key configuration again
+
+- **Hook Improvements**
+  - Correction detection (triggers on "actually", "wrong", etc.)
+  - Resume state injection at session start
+  - File-triggered auto-recall in PreToolUse
+  - Frontend file detection with UI/UX guidelines
+
+### Fixed
+
+- Hook files renamed to `.cjs` to fix ESM/CommonJS compatibility
+- CLI updated to use `.cjs` hook extensions
+
 ## [2.0.0] - 2025-01-15
 
 ### Added

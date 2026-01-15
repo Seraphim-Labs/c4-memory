@@ -151,6 +151,94 @@ export function queryMemories(db: Database.Database, input: QueryMemoriesInput):
 }
 
 /**
+ * Extract keywords from text for fallback search
+ */
+export function extractKeywords(text: string): string[] {
+  const stopWords = new Set([
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had',
+    'do', 'does', 'did', 'will', 'would', 'could', 'should', 'can', 'this', 'that',
+    'what', 'which', 'who', 'where', 'when', 'why', 'how', 'and', 'but', 'if', 'or',
+    'of', 'at', 'by', 'for', 'with', 'to', 'from', 'in', 'out', 'on', 'please', 'help',
+    'want', 'need', 'make', 'get', 'me', 'my', 'i', 'you', 'it', 'we', 'they', 'just',
+    'like', 'know', 'think', 'see', 'look', 'use', 'find', 'give', 'tell', 'about',
+    'all', 'any', 'some', 'memory', 'memories', 'recall', 'remember', 'search'
+  ]);
+
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !stopWords.has(w))
+    .slice(0, 10); // Limit to 10 keywords
+}
+
+/**
+ * Query memories with keyword matching (fallback when semantic search fails)
+ */
+export function queryMemoriesWithKeywords(
+  db: Database.Database,
+  keywords: string[],
+  input: QueryMemoriesInput
+): Memory[] {
+  if (keywords.length === 0) {
+    return queryMemories(db, input);
+  }
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  // By default, only return active memories
+  if (!input.includeArchived) {
+    conditions.push("status = 'active'");
+  }
+
+  // Keyword matching on decoded_cache
+  const keywordConditions = keywords.map(() => "decoded_cache LIKE ?").join(' OR ');
+  conditions.push(`(${keywordConditions})`);
+  params.push(...keywords.map(k => `%${k}%`));
+
+  // Scope filter
+  if (input.scope && input.scope !== 'both') {
+    conditions.push('scope = ?');
+    params.push(input.scope);
+  }
+
+  // Project hash filter
+  if (input.projectHash) {
+    conditions.push('(project_hash = ? OR scope = ?)');
+    params.push(input.projectHash, 'global');
+  }
+
+  // Type filter
+  if (input.types && input.types.length > 0) {
+    const placeholders = input.types.map(() => '?').join(', ');
+    conditions.push(`type IN (${placeholders})`);
+    params.push(...input.types);
+  }
+
+  // Importance filter
+  if (input.minImportance !== undefined) {
+    conditions.push('importance >= ?');
+    params.push(input.minImportance);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const limit = input.limit ?? 100;
+  const offset = input.offset ?? 0;
+
+  const rows = db.prepare(`
+    SELECT id, type, encoded, decoded_cache, scope, project_hash, importance, created_at, accessed_at, access_count,
+           usefulness_score, times_helpful, times_unhelpful, status, parent_id, level, last_decay
+    FROM memories
+    ${whereClause}
+    ORDER BY usefulness_score DESC, importance DESC, accessed_at DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, limit, offset) as DbMemoryRow[];
+
+  return rows.map(rowToMemory);
+}
+
+/**
  * Update a memory
  */
 export function updateMemory(db: Database.Database, input: UpdateMemoryInput): boolean {
@@ -208,6 +296,18 @@ export function deleteMemoriesByQuery(
   const placeholders = ids.map(() => '?').join(', ');
   const result = db.prepare(`DELETE FROM memories WHERE id IN (${placeholders})`).run(...ids);
   return result.changes;
+}
+
+/**
+ * Update memory access timestamp and count
+ * Called when a memory is retrieved to track usage patterns
+ */
+export function updateMemoryAccess(db: Database.Database, id: number): void {
+  db.prepare(`
+    UPDATE memories
+    SET accessed_at = ?, access_count = access_count + 1
+    WHERE id = ?
+  `).run(Date.now(), id);
 }
 
 /**
@@ -608,4 +708,228 @@ export function getChildMemories(db: Database.Database, parentId: number): Memor
   `).all(parentId) as DbMemoryRow[];
 
   return rows.map(rowToMemory);
+}
+
+// ==================== ACCESS PATTERN LEARNING ====================
+
+/**
+ * Record that memories were accessed together (co-access pattern)
+ * Creates/strengthens implicit relationships between memories accessed at similar times
+ */
+export function recordCoAccess(
+  db: Database.Database,
+  memoryIds: number[],
+  strength: number = 0.1
+): void {
+  if (memoryIds.length < 2) return;
+
+  const now = Date.now();
+
+  // For each pair of memories, create or strengthen a relationship
+  for (let i = 0; i < memoryIds.length; i++) {
+    for (let j = i + 1; j < memoryIds.length; j++) {
+      const [sourceId, targetId] = memoryIds[i] < memoryIds[j]
+        ? [memoryIds[i], memoryIds[j]]
+        : [memoryIds[j], memoryIds[i]];
+
+      // Check if relationship exists
+      const existing = db.prepare(`
+        SELECT id, strength FROM memory_relationships
+        WHERE source_id = ? AND target_id = ? AND relationship = 'similar'
+      `).get(sourceId, targetId) as { id: number; strength: number } | undefined;
+
+      if (existing) {
+        // Strengthen existing relationship (cap at 10)
+        const newStrength = Math.min(10, existing.strength + strength);
+        db.prepare(`
+          UPDATE memory_relationships
+          SET strength = ?
+          WHERE id = ?
+        `).run(newStrength, existing.id);
+      } else {
+        // Create new relationship
+        db.prepare(`
+          INSERT INTO memory_relationships (source_id, target_id, relationship, strength, created_at)
+          VALUES (?, ?, 'similar', ?, ?)
+        `).run(sourceId, targetId, strength, now);
+      }
+    }
+  }
+}
+
+/**
+ * Get frequently co-accessed memories for a given memory
+ * Returns memories that are often accessed together with the input memory
+ */
+export function getFrequentlyCoAccessedMemories(
+  db: Database.Database,
+  memoryId: number,
+  minStrength: number = 0.5,
+  limit: number = 5
+): Array<{ memory: Memory; coAccessStrength: number }> {
+  // Query relationships where this memory is involved, ordered by strength
+  const rows = db.prepare(`
+    SELECT
+      CASE
+        WHEN source_id = ? THEN target_id
+        ELSE source_id
+      END as related_id,
+      strength
+    FROM memory_relationships
+    WHERE (source_id = ? OR target_id = ?)
+      AND relationship = 'similar'
+      AND strength >= ?
+    ORDER BY strength DESC
+    LIMIT ?
+  `).all(memoryId, memoryId, memoryId, minStrength, limit) as { related_id: number; strength: number }[];
+
+  const results: Array<{ memory: Memory; coAccessStrength: number }> = [];
+
+  for (const row of rows) {
+    const memory = getMemory(db, row.related_id);
+    if (memory && memory.status === 'active') {
+      results.push({
+        memory,
+        coAccessStrength: row.strength,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Get memories accessed in a time window
+ * Useful for finding patterns of what memories are typically needed together
+ */
+export function getRecentlyAccessedTogether(
+  db: Database.Database,
+  windowMs: number = 60000,  // 1 minute default
+  minCount: number = 2
+): Map<number, number[]> {
+  const now = Date.now();
+  const cutoff = now - windowMs;
+
+  // Get all memories accessed in the window
+  const rows = db.prepare(`
+    SELECT id, accessed_at
+    FROM memories
+    WHERE accessed_at > ?
+    ORDER BY accessed_at DESC
+  `).all(cutoff) as { id: number; accessed_at: number }[];
+
+  if (rows.length < minCount) return new Map();
+
+  // Group by access time buckets (within 5 seconds = same access batch)
+  const buckets = new Map<number, number[]>();
+  const bucketSize = 5000; // 5 seconds
+
+  for (const row of rows) {
+    const bucketKey = Math.floor(row.accessed_at / bucketSize) * bucketSize;
+    if (!buckets.has(bucketKey)) {
+      buckets.set(bucketKey, []);
+    }
+    buckets.get(bucketKey)!.push(row.id);
+  }
+
+  // Filter to buckets with multiple memories (co-access patterns)
+  const patterns = new Map<number, number[]>();
+  for (const [key, ids] of buckets) {
+    if (ids.length >= minCount) {
+      patterns.set(key, ids);
+    }
+  }
+
+  return patterns;
+}
+
+/**
+ * Learn from recent access patterns
+ * Analyzes recent memory accesses and strengthens relationships between co-accessed memories
+ */
+export function learnFromAccessPatterns(
+  db: Database.Database,
+  windowMs: number = 300000  // 5 minutes default
+): number {
+  const patterns = getRecentlyAccessedTogether(db, windowMs, 2);
+  let relationshipsUpdated = 0;
+
+  for (const [, memoryIds] of patterns) {
+    recordCoAccess(db, memoryIds, 0.1);
+    relationshipsUpdated += (memoryIds.length * (memoryIds.length - 1)) / 2;
+  }
+
+  return relationshipsUpdated;
+}
+
+/**
+ * Decay relationship strengths over time
+ * Should be called periodically to let unused patterns fade
+ */
+export function decayRelationshipStrengths(
+  db: Database.Database,
+  decayFactor: number = 0.95,
+  minStrength: number = 0.1
+): number {
+  // Reduce all relationship strengths by decay factor
+  const result = db.prepare(`
+    UPDATE memory_relationships
+    SET strength = strength * ?
+    WHERE strength > ?
+  `).run(decayFactor, minStrength);
+
+  // Remove relationships that have decayed below minimum
+  db.prepare(`
+    DELETE FROM memory_relationships
+    WHERE strength < ?
+  `).run(minStrength);
+
+  return result.changes;
+}
+
+/**
+ * Get suggested memories based on access patterns
+ * Given a set of currently accessed memories, predict what else might be needed
+ */
+export function getSuggestedMemories(
+  db: Database.Database,
+  currentMemoryIds: number[],
+  limit: number = 3
+): Memory[] {
+  if (currentMemoryIds.length === 0) return [];
+
+  // Find memories that are frequently accessed with any of the current memories
+  const placeholders = currentMemoryIds.map(() => '?').join(', ');
+
+  const rows = db.prepare(`
+    SELECT
+      CASE
+        WHEN source_id IN (${placeholders}) THEN target_id
+        ELSE source_id
+      END as related_id,
+      SUM(strength) as total_strength
+    FROM memory_relationships
+    WHERE (source_id IN (${placeholders}) OR target_id IN (${placeholders}))
+      AND relationship = 'similar'
+    GROUP BY related_id
+    HAVING related_id NOT IN (${placeholders})
+    ORDER BY total_strength DESC
+    LIMIT ?
+  `).all(
+    ...currentMemoryIds,
+    ...currentMemoryIds,
+    ...currentMemoryIds,
+    ...currentMemoryIds,
+    limit
+  ) as { related_id: number; total_strength: number }[];
+
+  const memories: Memory[] = [];
+  for (const row of rows) {
+    const memory = getMemory(db, row.related_id);
+    if (memory && memory.status === 'active') {
+      memories.push(memory);
+    }
+  }
+
+  return memories;
 }

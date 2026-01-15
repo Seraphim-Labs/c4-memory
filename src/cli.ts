@@ -192,7 +192,7 @@ function installHooks(force: boolean): void {
   }
 
   // Copy hook scripts to hooks directory
-  const hookFiles = ['memory-inject.js', 'memory-auto-feedback.js', 'memory-continuous.js', 'memory-enforced.js', 'memory-auto-inject.js'];
+  const hookFiles = ['memory-inject.cjs', 'memory-auto-feedback.cjs', 'memory-continuous.cjs', 'memory-enforced.cjs', 'memory-auto-inject.cjs'];
   const sourceHooksDir = join(__dirname, 'hooks');
 
   // Get the c4-memory installation path (parent of dist directory)
@@ -216,7 +216,7 @@ function installHooks(force: boolean): void {
   }
 
   const hooks = (settings.hooks as Record<string, unknown[]>) || {};
-  const autoInjectHookPath = join(HOOKS_DIR, 'memory-auto-inject.js');
+  const autoInjectHookPath = join(HOOKS_DIR, 'memory-auto-inject.cjs');
   // Set environment variable for hook to find better-sqlite3
   const envPrefix = process.platform === 'win32'
     ? `set "CLAUDE_MEMORY_PATH=${c4MemoryPath}" && `
